@@ -65,7 +65,7 @@ async function main() {
         (async () => {
             const langNames = getFileNames(langsSrc, '.json')
             const themeNames = getFileNames(themesSrc, '.json')
-
+            await fs.mkdir(path.join(cwd, 'src/generated'), dirOpts)
             await fs.writeFile(path.join(cwd, 'src/generated/assetNames.ts'), `
 export const langNames = ${JSON.stringify([...await langNames, 'mintyml'])} as const;
 export const themeNames = ${JSON.stringify(await themeNames)} as const;

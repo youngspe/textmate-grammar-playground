@@ -4,23 +4,51 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>title</title>
+    <title>TmLanguage and TmTheme playground</title>
     <script src="/main.js"></script>
 </head>
 <style>
     :root {
         color-scheme: light dark;
-
+        --fg: #657B83;
+        --bg: #FDF6E3;
         --scheme-tint-color: white;
-        --base-accent-color: rgb(38, 139, 210);
-        --accent-color: color-mix(in oklab, var(--base-accent-color) 50%, var(--scheme-tint-color));
+        --scheme-tint-fg: black;
+        --accent-color: rgb(203, 75, 22);
+        --tinted-accent-color: color-mix(in oklab, var(--accent-color) 50%, var(--scheme-tint-color));
+        --tab-bg: color-mix(in oklab, var(--bg) 75%, var(--accent-color));
+        --tab-fg: var(--fg);
         accent-color: var(--accent-color);
+        --select-bg: var(--tinted-accent-color);
+        --select-fg: currentcolor;
+        --border-color: var(--fg);
+        --shadow-color: color-mix(in oklch, black 75%, var(--accent-color));
+        color: var(--fg);
+        background: var(--bg);
+        transition: background color 0.5s ease-out;
+        font-family: sytem-ui;
+    }
+
+    @supports (color: light-dark(red, blue)) {
+        :root {
+            --shadow-color: light-dark(color-mix(in oklch, #00000060 70%, var(--accent-color)),
+                    color-mix(in oklch, black 50%, var(--accent-color)));
+            --tab-fg: light-dark(color-mix(in oklch, var(--fg) 50%, black),
+                    color-mix(in oklch, var(--fg) 50%, white));
+        }
     }
 
     @media (prefers-color-scheme: dark) {
         :root {
+            --fg: #839496;
+            --bg: #002B36;
             --scheme-tint-color: black;
+            --scheme-tint-fg: white;
         }
+    }
+
+    :focus-visible {
+        outline-color: var(--accent-color);
     }
 
     *,
@@ -36,9 +64,12 @@
         margin: 0;
     }
 
+
     .outer-flex {
         display: flex;
         flex-flow: column;
+        gap: 0.5em;
+        padding: 0.25em;
     }
 
     .main-flex {
@@ -48,21 +79,41 @@
         display: flex;
         flex-flow: column wrap;
         place-content: stretch;
+        gap: 0.5em;
     }
 
     .main-flex>* {
         margin: 0;
+        transition: all 0.125s ease-out;
     }
 
     .main-flex>details {
         position: relative;
-        border: thin solid currentColor;
         height: max-content;
+        overflow: hidden;
+    }
+
+    .main-flex>details,
+    .main-header,
+    .main-footer {
+        border: thin solid var(--border-color);
+        border-radius: 0.5ch;
+        box-shadow: 0 0.25em 0.75em -0.5em var(--shadow-color);
+    }
+
+    .main-flex>details>* {
+        outline-offset: -0.3ch;
+        outline-width: 0.2ch;
+        transition: all 50ms ease-out;
     }
 
     .main-flex>details[open] {
         flex: 1.0 1.0 min(60em, 33vw);
         height: 60em;
+    }
+
+    .main-flex>details:not([open])>:not(summary) {
+        height: 0;
     }
 
     .main-flex>details>summary {
@@ -71,7 +122,8 @@
         text-align: center;
         padding: 0 1ch;
         margin: 0;
-        background: var(--accent-color);
+        background: var(--tab-bg);
+        color: var(--tab-fg);
     }
 
     .main-flex>details>div {
@@ -80,11 +132,19 @@
         top: 1.5rem;
     }
 
+    .main-header,
+    .main-footer {
+        background: color-mix(in oklab, var(--tab-bg) 50%, var(--bg));
+        color: color-mix(in oklab, var(--tab-fg) 50%, var(--fg));
+    }
+
     .input {
         overflow: auto;
         white-space: preserve nowrap;
         font-family: monospace;
         padding: 1em 1ch;
+        box-shadow: 0 0.15em 0.5em -0.25em inset var(--shadow-color);
+        border-block-start: thin solid var(--border-color);
     }
 
     #output {
@@ -93,6 +153,7 @@
         display: flex;
         flex-flow: column;
         flex: 1.0;
+        border-block-start: thin solid var(--border-color);
     }
 
     #output>* {
@@ -106,12 +167,13 @@
         flex: 1.0;
     }
 
-    #output>pre>div {
-        height: 1em;
+    #output>pre>div,
+    .main-flex>details>div>div {
+        min-height: 1em;
     }
 
     #output>.info {
-        border: thin solid currentcolor;
+        border-block-start: thin solid var(--border-color);
         overflow-x: auto;
     }
 
@@ -125,8 +187,12 @@
 
     .token:hover,
     .token:focus {
-        box-shadow: 0em 0.2em 0.6em -0.1em #000000;
+        box-shadow: 0em 0.2em 0.6em -0.1em var(--shadow-color);
         border-color: currentColor;
+    }
+
+    .token:focus-visible {
+        outline: none;
     }
 
     .toolbar {
@@ -137,6 +203,7 @@
         row-gap: 0.25em;
         width: fit-content;
         margin-inline: auto;
+        transition: all 50ms ease-out;
     }
 
     .toolbar>label {
@@ -158,8 +225,32 @@
     }
 
     .options {
-        width: fit-content;
-        margin-inline: auto;
+        text-align: center;
+    }
+
+    details:not([open])>.toolbar {
+        transform: scaleX(0.90);
+    }
+
+    .options>summary {
+        padding: 0 1ch;
+    }
+
+    select {
+        border: thin solid var(--border-color);
+        background: var(--bg);
+        box-shadow: 0 0.075em 0.3em -0.1em inset var(--shadow-color);
+        border: thin solid var(--border-color);
+        border-radius: 0.5ch;
+    }
+
+    summary {
+        cursor: pointer;
+        text-align: center;
+    }
+
+    fieldset {
+        border: none;
     }
 
     @media (min-width: 72ch) {
@@ -167,15 +258,64 @@
             display: inline-flex;
         }
 
-        .options>summary {
+        details[open].options>summary {
             display: inline list-item;
-            cursor: pointer;
+        }
+    }
+
+    ::selection {
+        background: var(--select-bg);
+        color: var(--select-fg);
+    }
+
+    .main-footer {
+        display: flex;
+        justify-content: space-evenly;
+        align-items: baseline;
+        overflow-x: auto;
+    }
+
+    a {
+        color: var(--accent-color);
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: solid underline;
+    }
+
+    .ack {
+        font-size: smaller;
+        width: max-content;
+    }
+
+    .ack>ul {
+        display: flex;
+        padding: 0;
+        margin: 0;
+    }
+
+    .ack>ul>li {
+        display: block;
+    }
+
+    .ack>ul>li:not(:first-of-type)::before {
+        content: '::';
+        margin-inline: 0.5ch;
+        opacity: 50%;
+        display: inline-block;
+        transform: scale(0.75);
+    }
+
+    @supports(content: '/' / '') {
+        .ack>ul>li:not(:first-of-type)::before {
+            content: '::' / ''
         }
     }
 </style>
 
 <body onload="_initScript()" class="outer-flex" spellcheck="false">
-    <header>
+    <header class="main-header">
         <details class="options">
             <summary>Options</summary>
             <fieldset class="toolbar">
@@ -214,6 +354,22 @@
             <div id="output"></div>
         </details>
     </main>
+    <footer class="main-footer">
+        <small>
+            &copy; <time datetime="2024">2024</time> <a href="https://youngspe.github.io/">Spencer Young</a>
+        </small>
+
+        <details class="ack" aria-labelledby="ack-summary">
+            <summary id="ack-summary">Acknowledgements</summary>
+            <ul>
+                <li><a href="https://shiki.style/">shiki</a></li>
+                <li><a href="https://github.com/shikijs/textmate-grammars-themes">shikijs/textmate-grammars-themes</a>
+                </li>
+                <li><a href="https://github.com/microsoft/TypeScript-TmLanguage">microsoft/TypeScript-TmLanguage</a>
+                </li>
+            </ul>
+        </details>
+    </footer>
 </body>
 
 </html>

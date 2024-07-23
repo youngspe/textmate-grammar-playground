@@ -1,5 +1,5 @@
 import * as plist from 'fast-plist'
-import { LanguageRegistration, RawGrammar, RawTheme, RawThemeSetting } from 'shiki'
+import { LanguageRegistration, RawGrammar, RawTheme, RawThemeSetting, ThemeRegistrationAny } from 'shiki'
 import { Writable } from './utils'
 import * as yaml from 'yaml'
 
@@ -13,43 +13,13 @@ function parseSource(source: string): any {
     }
 }
 
-function convertTheme(theme: any): RawTheme {
-    if ('settings' in theme) {
-        return theme
-    }
-    if ('tokenColors' in theme) {
-        const outTheme: Writable<RawTheme> = {
-            settings: theme.tokenColors ?? []
-        }
-
-        if ('colors' in theme) {
-            const colors = theme.colors
-            let globalSettings: Writable<RawThemeSetting['settings']> | null = null
-
-            if (colors['editor.foreground']) {
-                (globalSettings ??= {}).foreground = colors['editor.foreground']
-            }
-
-            if (colors['editor.background']) {
-                (globalSettings ??= {}).background = colors['editor.background']
-            }
-
-            if (globalSettings) {
-                outTheme.settings?.splice(0, 0, { settings: globalSettings })
-            }
-        }
-
-        if ('name' in theme) {
-            outTheme.name = theme.name
-        }
-
-        return outTheme
-    }
-
-    throw new Error('invalid theme')
+function convertTheme(theme: any): ThemeRegistrationAny {
+    if (theme === null || typeof theme !== 'object') throw new Error(`invalid theme: ${theme}`)
+    if (!('settings' in theme) && !('tokenColors' in theme)) throw new Error('invalid theme')
+    return theme
 }
 
-export function getTheme(source: string): RawTheme | null {
+export function getTheme(source: string): ThemeRegistrationAny | null {
     source = source.trimStart()
 
     if (source == '') return null
@@ -106,4 +76,33 @@ function applyVariables<T extends object>(target: T): Omit<T, 'variables'> {
         replaceAllVariables(target, variables)
     }
     return target
+}
+
+export function getScopeSetting(theme: ThemeRegistrationAny, scope: string, setting: string): string | null {
+    let bestLength = 0
+    let settingValue: string | null = null
+    for (const current of theme.settings ?? theme.tokenColors ?? []) {
+        if (!current.settings || typeof current.settings !== 'object' || !(setting in current.settings)) continue
+        let currentScope = ''
+        if (current.scope instanceof Array) {
+            currentScope = current.scope.reduce((best, current) => (
+                current.length > bestLength
+                    && current.length > best.length
+                    && scope.startsWith(current)
+                    && (scope.at(current.length) ?? '.') === '.' ?
+                    current :
+                    best
+            ), currentScope)
+        } else if (current.scope && current.scope.length > bestLength && scope.startsWith(current.scope)) {
+            currentScope = current.scope
+        }
+
+        if (currentScope.length === scope.length) return (current.settings as any)[setting]
+
+        if (currentScope.length > bestLength) {
+            bestLength = currentScope.length
+            settingValue = (current.settings as any)[setting]
+        }
+    }
+    return settingValue
 }

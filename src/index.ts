@@ -24,17 +24,6 @@ const subscribeProperty = <T extends Target[Prop], Target, Prop extends keyof Ta
     }
 })
 
-const subscribeTextContent = (
-    src: rx.Observable<string | null>,
-    element: HTMLElement,
-) => subscribeProperty(
-    src,
-    element,
-    'textContent',
-    (value, element) => value != null && value !== element.innerText
-)
-
-
 class GrammarPlaygroundView {
     private _outputView?: HTMLElement
 
@@ -73,7 +62,7 @@ class GrammarPlaygroundView {
                 .pipe(rx.filter(t => t != null))
                 .subscribe(t => this.updateHighlights(t)),
             viewModel.colors.subscribe(({
-                fg, bg, accent, tabFg, tabBg, border, selectFg, selectBg, dark
+                fg, bg, accent, tabFg, tabBg, border, selectFg, selectBg, dark, errorFg, errorBg,
             }) => {
                 root.style.cssText = ''
                 if (fg) { root.style.setProperty('--fg', fg) }
@@ -85,6 +74,8 @@ class GrammarPlaygroundView {
                 if (selectFg) { root.style.setProperty('--select-fg', selectFg) }
                 if (selectBg) { root.style.setProperty('--select-bg', selectBg) }
                 if (dark != null) { root.style.setProperty('color-scheme', dark ? 'dark' : 'light') }
+                if (errorFg) { root.style.setProperty('--error-fg', errorFg) }
+                if (errorBg) { root.style.setProperty('--error-bg', errorBg) }
                 store.rootStyle = root.style.cssText
             }),
         )
@@ -95,6 +86,8 @@ class GrammarPlaygroundView {
         grammarInput,
         codeInput,
         themeInput,
+        grammarError,
+        themeError,
         outputView,
         langSelect,
         themeSelect,
@@ -108,15 +101,15 @@ class GrammarPlaygroundView {
         this.sub(
             observeEvent()
                 .when(grammarInput, 'input')
-                .pipe(rx.map(({ target }) => target.innerText ?? ''))
+                .pipe(rx.map(({ target }) => target.value))
                 .subscribe(viewModel.grammar),
             observeEvent()
                 .when(codeInput, 'input')
-                .pipe(rx.map(({ target }) => target.innerText ?? ''))
+                .pipe(rx.map(({ target }) => target.value))
                 .subscribe(viewModel.code),
             observeEvent()
                 .when(themeInput, 'input')
-                .pipe(rx.map(({ target }) => target.innerText ?? ''))
+                .pipe(rx.map(({ target }) => target.value))
                 .subscribe(viewModel.theme),
             observeEvent()
                 .when(langSelect, 'input')
@@ -136,12 +129,33 @@ class GrammarPlaygroundView {
                 .subscribe(() => {
                     viewModel.themePreset.next(themeSelect.value = '')
                 }),
-            subscribeTextContent(viewModel.grammar, grammarInput),
-            subscribeTextContent(viewModel.code, codeInput),
-            subscribeTextContent(viewModel.theme, themeInput),
+            subscribeProperty(viewModel.grammar, grammarInput, 'value'),
+            subscribeProperty(viewModel.code, codeInput, 'value'),
+            subscribeProperty(viewModel.theme, themeInput, 'value'),
             subscribeProperty(viewModel.langPreset, langSelect, 'value', null),
             subscribeProperty(viewModel.themePreset, themeSelect, 'value', null),
         )
+
+        const setupErrorView = (view: HTMLElement, key: keyof typeof viewModel.errors) => {
+            const errorTextView = el('span', { className: 'status-text' })
+            const button = el('button', { className: 'close-button', type: 'button' }, ['close'])
+            view.replaceChildren(errorTextView, button)
+
+            function updateWithError(error: Error | null) {
+                errorTextView.innerText = error ? error.toString() : ''
+                view.hidden = error == null
+            }
+
+            button.addEventListener('click', () => { updateWithError(null) })
+
+            this.sub(
+                viewModel.errors[key].pipe(rx.distinctUntilChanged((a, b) => a == b || a?.toString() == b?.toString())).subscribe(updateWithError),
+                () => { view.replaceChildren() },
+            )
+        }
+
+        setupErrorView(grammarError, 'lang')
+        setupErrorView(themeError, 'theme')
 
         {
             const pre = el('pre')
@@ -228,31 +242,49 @@ interface Reference<T> {
     value: T
 }
 
-function overrideTabBehavior<T extends HTMLElement>(target: T, tabString: Reference<string>): T {
+function overrideTabBehavior<T extends HTMLTextAreaElement>(target: T, tabString: Reference<string>): T {
     const _target: typeof target & { [_isEditing]?: boolean } = target
     _target.addEventListener('keydown', e => {
-        if (e.key == 'Tab' && _target[_isEditing]) {
-            const selection = document.getSelection()
-            if (!selection) return
-            if (selection.rangeCount != 1) return
-            if (!_target.contains(selection.anchorNode) || !_target.contains(selection.focusNode)) return
-            const { focusNode } = selection
-            selection.getRangeAt(0).deleteContents()
+        if (!_target[_isEditing] || e.metaKey || e.ctrlKey || e.altKey) return
+        if (e.key == 'Tab') {
+            const start = _target.selectionStart
+            const end = _target.selectionEnd
+            const lineStart = target.value.lastIndexOf('\n', start) + 1
             const tab = tabString.value
-            if (focusNode instanceof Text) {
-                focusNode.replaceData(selection.focusOffset, 0, tab)
-                selection.setPosition(focusNode, selection.focusOffset + tab.length)
-            } else if (focusNode instanceof HTMLElement) {
-                const newNode = new Text(tab)
-                if (focusNode.firstChild instanceof HTMLElement && focusNode.firstChild.tagName == 'BR') {
-                    focusNode.firstChild.replaceWith(newNode)
-                } else {
-                    focusNode.prepend(newNode)
-                }
-                selection.setPosition(newNode, tab.length)
+
+            let newSubString: string
+            let tempStart: number | undefined
+            let newStart: number | undefined
+
+            if (e.shiftKey) {
+                tempStart = lineStart
+                newSubString = _target.value.slice(lineStart, end).replace(new RegExp(`^${tab}`, 'gm'), '')
+                newStart = Math.max(start - tab.length, lineStart)
+            } else if (start === end) {
+                const sliceStart = (start - lineStart) % tab.length
+                newSubString = tab.slice(sliceStart)
+                newStart = start + tab.length - sliceStart
+            } else {
+                tempStart = lineStart
+                newSubString = _target.value.slice(lineStart, end).replace(/^(?!$)/gm, tab)
+                newStart = start === lineStart ? lineStart : start + tab.length
+                _target.selectionStart = lineStart
             }
-            _target.dispatchEvent(new Event('input'))
+
+            if (tempStart != null) { _target.selectionStart = tempStart }
+
+            const execCommandSuccess =
+                typeof document.execCommand === 'function'
+                && document.execCommand('insertText', false, newSubString)
+
+            if (!execCommandSuccess) {
+                _target.setRangeText(newSubString)
+            }
+
+            if (newStart != null) { _target.selectionStart = newStart }
+
             e.preventDefault()
+            _target.dispatchEvent(new InputEvent('input'))
         } else if (e.key == 'Escape') {
             _target[_isEditing] = false
             _target.blur()
@@ -279,9 +311,11 @@ interface BeginArgs {
 
 interface LoadedArgs {
 
-    grammarInput: HTMLElement,
-    codeInput: HTMLElement,
-    themeInput: HTMLElement,
+    grammarInput: HTMLTextAreaElement,
+    codeInput: HTMLTextAreaElement,
+    themeInput: HTMLTextAreaElement,
+    grammarError: HTMLElement,
+    themeError: HTMLElement,
     outputView: HTMLElement,
     langSelect: HTMLSelectElement,
     themeSelect: HTMLSelectElement,
@@ -329,9 +363,11 @@ const initialize = () => {
     })
 
     view.loaded({
-        grammarInput: overrideTabBehavior(document.getElementById('grammar-in')!, tabString),
-        codeInput: overrideTabBehavior(document.getElementById('code-in')!, tabString),
-        themeInput: overrideTabBehavior(document.getElementById('theme-in')!, tabString),
+        grammarInput: overrideTabBehavior(document.getElementById('grammar-in') as HTMLTextAreaElement, tabString),
+        codeInput: overrideTabBehavior(document.getElementById('code-in') as HTMLTextAreaElement, tabString),
+        themeInput: overrideTabBehavior(document.getElementById('theme-in') as HTMLTextAreaElement, tabString),
+        grammarError: document.getElementById('grammar-error')!,
+        themeError: document.getElementById('theme-error')!,
         outputView: document.getElementById('output')!,
         langSelect: document.getElementById('select-lang') as HTMLSelectElement,
         themeSelect: document.getElementById('select-theme') as HTMLSelectElement,

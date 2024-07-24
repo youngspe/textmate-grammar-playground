@@ -10,7 +10,7 @@
     "build": "ts-node scripts/prebuild.ts",
     "build:dev": "webpack --mode=development",
     "build:prod": "webpack --mode=production --node-env=production",
-    "watch": "webpack --watch --mode=production --node-env=production",
+    "watch": "webpack --watch --mode=development",
     "clean": "bash -c \"rm -rf ./dist ; rm -rf ./src/generated\""
   },
   "keywords": [],

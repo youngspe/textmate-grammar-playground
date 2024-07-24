@@ -25,6 +25,8 @@
         --select-fg: currentcolor;
         --border-color: var(--fg);
         --shadow-color: color-mix(in oklch, black 75%, var(--accent-color));
+        --error-fg: color-mix(in oklab, var(--tab-fg), red 50%);
+        --error-bg: var(--tab-bg);
         color: var(--fg);
         background: var(--bg);
         transition: background color 0.5s ease-out;
@@ -128,10 +130,34 @@
         color: var(--tab-fg);
     }
 
-    .main-flex>details>div {
+    .main-flex>details>div.box {
+        display: flex;
+        flex-flow: column;
+        justify-content: stretch;
+    }
+
+    .main-flex>details>.box {
         position: absolute;
         inset: 0;
         top: 1.5rem;
+    }
+
+    .box {
+        tab-size: 4ch;
+    }
+
+    .box>textarea {
+        width: 100%;
+        height: 0;
+        flex: 1.0;
+    }
+
+    textarea.box,
+    .box>textarea {
+        resize: none;
+        background: var(--bg);
+        color: inherit;
+        border: none;
     }
 
     .main-header,
@@ -150,8 +176,6 @@
     }
 
     #output {
-        grid-row: 1 / 3;
-        grid-column: 1;
         display: flex;
         flex-flow: column;
         flex: 1.0;
@@ -161,22 +185,18 @@
     #output>* {
         padding: 1em 1ch;
         font-family: monospace;
-    }
-
-    #output>pre {
-        margin: 0;
-        overflow: auto;
         flex: 1.0;
-    }
-
-    #output>pre>div,
-    .main-flex>details>div>div {
-        min-height: 1em;
     }
 
     #output>.info {
         border-block-start: thin solid var(--border-color);
         overflow-x: auto;
+        flex: 0.0 0.5 max-content;
+        height: fit-content;
+    }
+
+    #output>pre>div {
+        height: 1em;
     }
 
     .token {
@@ -320,6 +340,49 @@
         display: flex;
         display: contents;
     }
+
+    textarea.box::placeholder {
+        color: currentColor;
+        font-style: italic;
+        opacity: 65%;
+        font-family: system-ui;
+        transition: all 0.25s ease-out;
+    }
+
+    textarea.box:focus::placeholder {
+        opacity: 45%;
+    }
+
+    .error-status {
+        background: var(--error-bg);
+        color: var(--error-fg);
+        padding: 0.5em 0.5ch;
+        text-align: end;
+        border-radius: 1ch;
+        box-shadow: 0 0.1em 0.4em -0.1em var(--shadow-color);
+        margin: 0.5em 0.5ch;
+        max-height: max(4em, min(50%, 8em));
+        overflow-y: auto;
+    }
+
+    .error-status>:not(button) {
+        float: inline-start;
+        text-align: start;
+    }
+
+    .error-status>button {
+        position: sticky;
+        top: 0;
+        bottom: 0;
+    }
+
+    button {
+        background: none;
+        border-radius: 1ch;
+        color: var(--accent-color);
+        box-shadow: 0 0.1em 0.4em -0.1em var(--shadow-color);
+        border: none;
+    }
 </style>
 
 <body onload="_initScript()" class="outer-flex" spellcheck="false">
@@ -347,19 +410,25 @@
     <main class="main-flex">
         <details open>
             <summary>TmLanguage</summary>
-            <div id="grammar-in" class="input" contenteditable="true"></div>
+            <div class="box">
+                <div hidden id="grammar-error" class="error-status"></div>
+                <textarea placeholder="enter a TextMate language grammar" id="grammar-in" class="input box"></textarea>
+            </div>
         </details>
         <details open>
             <summary>TmTheme</summary>
-            <div id="theme-in" class="input" contenteditable="true"></div>
+            <div class="box">
+                <div hidden id="theme-error" class="error-status"></div>
+                <textarea placeholder="enter a TextMate color scheme" id="theme-in" class="input box"></textarea>
+            </div>
         </details>
         <details open>
             <summary>Example code</summary>
-            <div id="code-in" class="input" contenteditable="true"></div>
+            <textarea placeholder="enter example code to highlight" id="code-in" class="input box"></textarea>
         </details>
         <details open>
             <summary>Rendered</summary>
-            <div id="output"></div>
+            <div id="output" class="box"></div>
         </details>
     </main>
     <footer class="main-footer">

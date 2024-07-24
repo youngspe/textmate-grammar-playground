@@ -44,6 +44,8 @@ export class GrammarPlaygroundViewModel {
         selectFg: new rx.BehaviorSubject<string | null>(null),
         selectBg: new rx.BehaviorSubject<string | null>(null),
         dark: new rx.BehaviorSubject<boolean | null>(null),
+        errorFg: new rx.BehaviorSubject<string | null>(null),
+        errorBg: new rx.BehaviorSubject<string | null>(null),
     } as const
 
     readonly colors: rx.Observable<{
@@ -56,7 +58,14 @@ export class GrammarPlaygroundViewModel {
         selectFg: string | null,
         selectBg: string | null,
         dark: boolean | null,
+        errorFg: string | null,
+        errorBg: string | null,
     }>
+
+    readonly errors = {
+        lang: new rx.BehaviorSubject<Error | null>(null),
+        theme: new rx.BehaviorSubject<Error | null>(null),
+    } as const;
 
     private readonly _sub
     private readonly _signal
@@ -87,8 +96,20 @@ export class GrammarPlaygroundViewModel {
                 selectFg: this._colors.selectFg.pipe(rx.distinctUntilChanged()),
                 selectBg: this._colors.selectBg.pipe(rx.distinctUntilChanged()),
                 dark: this._colors.dark.pipe(rx.distinctUntilChanged()),
+                errorFg: this._colors.selectFg.pipe(rx.distinctUntilChanged()),
+                errorBg: this._colors.selectBg.pipe(rx.distinctUntilChanged()),
             })
         }
+    }
+
+    private catchMap<T, U>(f: (item: T) => U, key: keyof (typeof this.errors)) {
+        return catchMap((item: T) => {
+            const out = f(item)
+            return out
+        }, e => {
+            const error = e instanceof Error ? e : new Error(e == null ? undefined : e.toString?.() ?? String(e))
+            this.errors[key].next(error)
+        })
     }
 
     private async loadGrammar(value: string) {
@@ -114,16 +135,16 @@ export class GrammarPlaygroundViewModel {
             .pipe(rx.filter(x => x != null))
             .pipe(debounceNow(REBUILD_DEBOUNCE_TIME))
             .pipe(rx.distinctUntilChanged())
-            .pipe(catchMap(source => {
+            .pipe(this.catchMap(source => {
                 const grammar: Writable<LanguageRegistration> | null = source ? getGrammar(source) : null
                 if (!grammar) throw new Error('No grammar provided')
                 return Object.assign(grammar, { name: CUSTOM_LANG } as const)
-            }, console.error))
+            }, 'lang'))
 
         const theme = this.theme
             .pipe(debounceNow(REBUILD_DEBOUNCE_TIME))
             .pipe(rx.distinctUntilChanged())
-            .pipe(catchMap(source => source ? getTheme(source) : null, console.error))
+            .pipe(this.catchMap(source => source ? getTheme(source) : null, 'theme'))
             .pipe(rx.map(theme => {
                 this._colors.editorFg.next(theme?.fg ?? theme?.colors?.['editor.foreground'] ?? null)
                 this._colors.editorBg.next(theme?.bg ?? theme?.colors?.['editor.background'] ?? null)
@@ -156,12 +177,29 @@ export class GrammarPlaygroundViewModel {
                 this._colors.selectFg.next(theme?.colors?.['editor.selectionForeground'] ?? null)
                 this._colors.selectBg.next(theme?.colors?.['editor.selectionBackground'] ?? null)
                 this._colors.dark.next(theme?.type == null ? null : theme.type == 'dark')
+                this._colors.errorFg.next(
+                    theme?.colors?.['inputValidation.errorForeground'] ??
+                    theme?.colors?.['statusBarItem.errorForeground'] ??
+                    theme?.colors?.['errorLens.errorForeground'] ??
+                    theme?.colors?.['editorError.foreground'] ??
+                    theme?.colors?.['errorForeground'] ??
+                    null
+                )
+                this._colors.errorBg.next(
+                    theme?.colors?.['inputValidation.errorBackground'] ??
+                    theme?.colors?.['statusBarItem.errorBackground'] ??
+                    theme?.colors?.['errorLens.errorBackground'] ??
+                    theme?.colors?.['editorError.background'] ??
+                    theme?.colors?.['inputValidation.background'] ??
+                    theme?.colors?.['statusBar.background'] ??
+                    null
+                )
                 return theme && Object.assign(theme, { name: CUSTOM_THEME } as const)
             }))
 
         const highlighter = rx.combineLatest({
             grammar, theme,
-        }).pipe(rx.switchMap(async ({ grammar, theme }) => {
+        }).pipe(this.catchMap(async ({ grammar, theme }) => {
             const themes = {
                 [DARK_THEME]: bundledThemes[DARK_THEME],
                 [LIGHT_THEME]: bundledThemes[LIGHT_THEME],
@@ -173,7 +211,7 @@ export class GrammarPlaygroundViewModel {
                     themes: Object.keys(themes),
                 }), theme
             }
-        }), cleanup(({ highlighter }) => highlighter.dispose()))
+        }, 'lang'), rx.switchAll(), cleanup(({ highlighter }) => highlighter.dispose()))
 
         const tokens = rx.combineLatest({
             highlighter,
@@ -181,16 +219,18 @@ export class GrammarPlaygroundViewModel {
             code: this.code.pipe(rx.distinctUntilChanged())
         })
             .pipe(debounceNow(HIGHLIGHT_DEBOUNCE_TIME))
-            .pipe(catchMap(({ highlighter: { theme, highlighter }, code, isDark }) => highlighter.codeToTokens(code ?? '', {
+            .pipe(this.catchMap(({ highlighter: { theme, highlighter }, code, isDark }) => highlighter.codeToTokens(code ?? '', {
                 lang: CUSTOM_LANG,
                 theme: theme ? CUSTOM_THEME : isDark ? DARK_THEME : LIGHT_THEME,
                 includeExplanation: true,
-            }), console.error))
+            }), 'lang'))
 
         this.sub(
             tokens.subscribe(this._tokens),
             this._tokens.subscribe(tokens => {
                 this.scopes.next(null)
+                this.errors.lang.next(null)
+                this.errors.theme.next(null)
                 this._colors.tokenFg.next(tokens?.fg ?? null)
                 this._colors.tokenBg.next(tokens?.bg ?? null)
             }),

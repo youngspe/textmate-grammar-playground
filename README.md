@@ -1,10 +1,12 @@
+[See it in action](https://youngspe.github.io/textmate-grammar-playground/)
+
 ## Overview
 
 This is a simple single-page application for experimenting with TmTheme and TmLanguage definitions for editors like Sublime or VSCode.
 
 <picture style="width: fit-content">
   <source media="(prefers-color-scheme: dark)" srcset="./screenshot-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="./screnshot.png">
+  <source media="(prefers-color-scheme: light)" srcset="./screenshot.png">
   <img alt="A screenshot of the application" src="./screenshot.png">
 </picture>
 

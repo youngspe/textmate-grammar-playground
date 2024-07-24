@@ -286,22 +286,22 @@
         text-decoration: solid underline;
     }
 
-    .ack {
+    .footer-details {
         font-size: smaller;
         width: max-content;
     }
 
-    .ack>ul {
+    .footer-details>ul {
         display: flex;
         padding: 0;
         margin: 0;
     }
 
-    .ack>ul>li {
+    .footer-details>ul>li {
         display: block;
     }
 
-    .ack>ul>li:not(:first-of-type)::before {
+    .footer-details>ul>li:not(:first-of-type)::before {
         content: '::';
         margin-inline: 0.5ch;
         opacity: 50%;
@@ -310,9 +310,15 @@
     }
 
     @supports(content: '/' / '') {
-        .ack>ul>li:not(:first-of-type)::before {
+        .footer-details>ul>li:not(:first-of-type)::before {
             content: '::' / ''
         }
+    }
+
+    .main-footer>nav {
+        font-size: smaller;
+        display: flex;
+        display: contents;
     }
 </style>
 
@@ -361,8 +367,12 @@
             &copy; <time datetime="2024">2024</time> <a href="https://youngspe.github.io/">Spencer Young</a>
         </small>
 
-        <details class="ack" aria-labelledby="ack-summary">
-            <summary id="ack-summary">Acknowledgements</summary>
+        <nav>
+            <span><a href="https://github.com/youngspe/textmate-grammar-playground">source</a></span>
+        </nav>
+
+        <details class="footer-details" aria-labelledby="footer-details-summary">
+            <summary id="footer-details-summary">Acknowledgements</summary>
             <ul>
                 <li><a href="https://shiki.style/">shiki</a></li>
                 <li><a href="https://github.com/shikijs/textmate-grammars-themes">shikijs/textmate-grammars-themes</a>

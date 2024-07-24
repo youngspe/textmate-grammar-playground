@@ -13,6 +13,12 @@ const distPath = path.join(cwd, 'dist/')
 const langsPath = path.join(distPath, 'langs/')
 const themesPath = path.join(distPath, 'themes/')
 
+function getArg(name: string): string | null {
+    return process.argv.find(s => s.startsWith(`--${name}=`))?.replace(/^.*?=/, '') ?? null
+}
+
+const baseUrl = getArg('baseUrl')
+
 /**
  *
  * @param {string} path
@@ -51,11 +57,20 @@ async function saveUrl(url: string, filePath: string) {
     }
 }
 
+async function transformFile(path: string, transform: (src: string) => string) {
+    const data = await fs.readFile(path, { encoding: 'utf8' })
+    await fs.writeFile(path, transform(data), { encoding: 'utf8' })
+}
+
 async function main() {
     await fs.mkdir(distPath, dirOpts)
 
     await Promise.all([
-        fs.cp(path.join(cwd, 'public/'), distPath, dirOpts),
+        fs.cp(path.join(cwd, 'public/'), distPath, dirOpts)
+            .then(() => baseUrl ? transformFile(
+                path.join(distPath, 'index.html'),
+                src => src.replace('<!--base-->', `<base href="${baseUrl}">`),
+            ) : null),
         copyFilesStripExtensions(langsSrc, langsPath)
             .then(() => Promise.all([
                 saveUrl(TYPESCRIPT_GRAMMAR_URL, path.join(langsPath, 'typescript')),

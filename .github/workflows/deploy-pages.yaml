@@ -33,6 +33,10 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        id: pages
+
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
@@ -49,7 +53,7 @@ jobs:
         run: pnpm install
 
       - name: Build site
-        run: pnpm run build
+        run: pnpm run build -- --buildUrl="${{ steps.pages.outputs.base_path }}"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1

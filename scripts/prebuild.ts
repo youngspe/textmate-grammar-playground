@@ -69,7 +69,7 @@ async function main() {
         fs.cp(path.join(cwd, 'public/'), distPath, dirOpts)
             .then(() => baseUrl ? transformFile(
                 path.join(distPath, 'index.html'),
-                src => src.replace('<!--base-->', `<base href="${baseUrl}">`),
+                src => src.replace('<!--base-->', `<script>window._appBaseUrl="${baseUrl}"</script>`),
             ) : null),
         copyFilesStripExtensions(langsSrc, langsPath)
             .then(() => Promise.all([

@@ -1,9 +1,7 @@
-import { BundledTheme, bundledThemes, createdBundledHighlighter, FontStyle, LanguageRegistration, loadWasm, RawGrammar, setDefaultWasmLoader, ThemeInput, ThemeRegistration, TokensResult } from 'shiki'
+import { FontStyle, LanguageRegistration, TokensResult } from 'shiki'
 import * as rx from 'rxjs'
-import { getGrammar, getTheme } from './tmAsset'
-import { Writable } from './utils'
 import { langNames, themeNames } from './generated/assetNames'
-import { debounceNow, observeEvent } from './utils/rx'
+import { observeEvent } from './utils/rx'
 import { storageObject } from './store'
 import { GrammarPlaygroundViewModel } from './viewModel'
 import { el } from './utils/dom'
@@ -308,7 +306,8 @@ const STORE_KEYS = {
 const root = document.querySelector('html')!
 
 const store = storageObject(sessionStorage, STORE_KEYS)
-viewModel.begin({ store })
+const baseUrl = (global as any)._appBaseUrl ?? ''
+viewModel.begin({ store, baseUrl })
 view.begin({ root, store })
 
 const initialize = () => {

@@ -11,11 +11,12 @@ const CUSTOM_THEME = '-custom-theme'
 const CUSTOM_LANG = '-custom-lang'
 
 const HIGHLIGHT_DEBOUNCE_TIME = 50
-const REBUILD_DEBOUNCE_TIME = 1_000
-const STORAGE_DEBOUCE_TIME = 1_000
+const REBUILD_DEBOUNCE_TIME = 750
+const STORAGE_DEBOUNCE_TIME = 1_000
 
 interface BeginArgs {
     store: Store
+    baseUrl: string
 }
 
 export class GrammarPlaygroundViewModel {
@@ -29,6 +30,7 @@ export class GrammarPlaygroundViewModel {
 
     private readonly _tokens = new rx.ReplaySubject<TokensResult | null>(1)
     readonly tokens = this._tokens.asObservable()
+    baseUrl = ''
 
     private readonly _colors = {
         editorFg: new rx.BehaviorSubject<string | null>(null),
@@ -90,12 +92,12 @@ export class GrammarPlaygroundViewModel {
     }
 
     private async loadGrammar(value: string) {
-        const text = await fetch(`/langs/${value}`, { signal: this._signal }).then(res => res.text())
+        const text = await fetch(`${this.baseUrl}/langs/${value}`, { signal: this._signal }).then(res => res.text())
         this.grammar.next(text)
     }
 
     private async loadTheme(value: string) {
-        const text = await fetch(`/themes/${value}`, { signal: this._signal }).then(res => res.text())
+        const text = await fetch(`${this.baseUrl}/themes/${value}`, { signal: this._signal }).then(res => res.text())
         this.theme.next(text)
     }
 
@@ -105,7 +107,8 @@ export class GrammarPlaygroundViewModel {
         }
     }
 
-    begin({ store }: BeginArgs): rx.Subscription {
+    begin({ store, baseUrl }: BeginArgs): rx.Subscription {
+        this.baseUrl = baseUrl
 
         const grammar = this.grammar
             .pipe(rx.filter(x => x != null))
@@ -210,23 +213,23 @@ new Example().sayHello('world');
         this.sub(
             this
                 .grammar
-                .pipe(rx.debounceTime(STORAGE_DEBOUCE_TIME))
+                .pipe(rx.debounceTime(STORAGE_DEBOUNCE_TIME))
                 .subscribe(value => store.grammar = value),
             this
                 .code
-                .pipe(rx.debounceTime(STORAGE_DEBOUCE_TIME))
+                .pipe(rx.debounceTime(STORAGE_DEBOUNCE_TIME))
                 .subscribe(value => store.code = value),
             this
                 .theme
-                .pipe(rx.debounceTime(STORAGE_DEBOUCE_TIME))
+                .pipe(rx.debounceTime(STORAGE_DEBOUNCE_TIME))
                 .subscribe(value => store.theme = value),
             this
                 .langPreset
-                .pipe(rx.debounceTime(STORAGE_DEBOUCE_TIME))
+                .pipe(rx.debounceTime(STORAGE_DEBOUNCE_TIME))
                 .subscribe(value => store.langPreset = value),
             this
                 .themePreset
-                .pipe(rx.debounceTime(STORAGE_DEBOUCE_TIME))
+                .pipe(rx.debounceTime(STORAGE_DEBOUNCE_TIME))
                 .subscribe(value => store.themePreset = value),
         )
 

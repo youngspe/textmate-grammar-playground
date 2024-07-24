@@ -53,7 +53,7 @@ jobs:
         run: pnpm install
 
       - name: Build site
-        run: pnpm run build -- --baseUrl="${{ steps.pages.outputs.base_url }}"
+        run: pnpm run build -- --baseUrl="${{ steps.pages.outputs.base_path }}"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

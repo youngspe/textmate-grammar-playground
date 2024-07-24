@@ -240,9 +240,9 @@ export class GrammarPlaygroundViewModel {
 
         this.grammar.next(store.grammar)
         this.code.next(store.code ?? `class Example {
-    function sayHello(name: string): void {
-        console.log(\`hello, \${name}!\`);
-    }
+  function sayHello(name: string): void {
+    console.log(\`hello, \${name}!\`);
+  }
 }
 
 new Example().sayHello('world');

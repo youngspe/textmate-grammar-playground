@@ -249,7 +249,7 @@ function overrideTabBehavior<T extends HTMLTextAreaElement>(target: T, tabString
         if (e.key == 'Tab') {
             const start = _target.selectionStart
             const end = _target.selectionEnd
-            const lineStart = target.value.lastIndexOf('\n', start) + 1
+            const lineStart = target.value.lastIndexOf('\n', start - 1) + 1
             const tab = tabString.value
 
             let newSubString: string
@@ -263,7 +263,6 @@ function overrideTabBehavior<T extends HTMLTextAreaElement>(target: T, tabString
             } else if (start === end) {
                 const sliceStart = (start - lineStart) % tab.length
                 newSubString = tab.slice(sliceStart)
-                newStart = start + tab.length - sliceStart
             } else {
                 tempStart = lineStart
                 newSubString = _target.value.slice(lineStart, end).replace(/^(?!$)/gm, tab)
@@ -278,7 +277,7 @@ function overrideTabBehavior<T extends HTMLTextAreaElement>(target: T, tabString
                 && document.execCommand('insertText', false, newSubString)
 
             if (!execCommandSuccess) {
-                _target.setRangeText(newSubString)
+                _target.setRangeText(newSubString, _target.selectionStart, end, 'end')
             }
 
             if (newStart != null) { _target.selectionStart = newStart }
@@ -352,7 +351,7 @@ const initialize = () => {
         return null
     }
 
-    const tabString = { value: getTabString(store.tabValue ??= '4') ?? '    ' }
+    const tabString = { value: getTabString(store.tabValue ??= '2') ?? '  ' }
     const tabSelect = document.getElementById('select-tab') as HTMLSelectElement
     tabSelect.value = store.tabValue
 

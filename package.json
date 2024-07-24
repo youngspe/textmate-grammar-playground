@@ -11,7 +11,7 @@
     "build:dev": "webpack --mode=development",
     "build:prod": "webpack --mode=production --node-env=production",
     "watch": "webpack --watch --mode=production --node-env=production",
-    "clean": "bash -c \"rm -rf ./dist/*\""
+    "clean": "bash -c \"rm -rf ./dist ; rm -rf ./src/generated\""
   },
   "keywords": [],
   "author": "",

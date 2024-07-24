@@ -3,7 +3,7 @@ import { createWriteStream } from 'node:fs'
 import { Writable } from 'node:stream'
 import path from 'node:path'
 import webpack from 'webpack'
-const webpackConfig = require('../webpack.config') as webpack.Configuration
+const webpackConfig = require('../webpack.config.js') as (options?: object) => webpack.Configuration
 
 
 const cwd = path.dirname(__dirname)
@@ -86,7 +86,16 @@ export const langNames = ${JSON.stringify([...await langNames, 'mintyml'])} as c
 export const themeNames = ${JSON.stringify(await themeNames)} as const;
 `)
         })(),
-        new Promise(ok => webpack(webpackConfig, ok)),
+        new Promise(cb => {
+            console.log("begin webpack...")
+            webpack(webpackConfig({
+                isProduction: true,
+            }), cb)
+        }
+        ).then(err => {
+            if (err) throw err
+            console.log('webpack complete!')
+        }),
     ])
 }
 

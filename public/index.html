@@ -142,18 +142,26 @@
         top: 1.5rem;
     }
 
+    .main-header {
+        display: flex;
+        justify-content: space-around;
+        align-items: baseline;
+        overflow-x: auto;
+    }
+
     .box {
         tab-size: 4ch;
+    }
+
+    .box:has(.input) {
+        box-shadow: 0 0.15em 0.5em -0.25em inset var(--shadow-color);
+        border-block-start: thin solid var(--border-color);
     }
 
     .box>textarea {
         width: 100%;
         height: 0;
         flex: 1.0;
-    }
-
-    textarea.box,
-    .box>textarea {
         resize: none;
         background: var(--bg);
         color: inherit;
@@ -171,8 +179,6 @@
         white-space: preserve nowrap;
         font-family: monospace;
         padding: 1em 1ch;
-        box-shadow: 0 0.15em 0.5em -0.25em inset var(--shadow-color);
-        border-block-start: thin solid var(--border-color);
     }
 
     #output {
@@ -254,10 +260,6 @@
         transform: scaleX(0.90);
     }
 
-    .options>summary {
-        padding: 0 1ch;
-    }
-
     select {
         border: thin solid var(--border-color);
         background: var(--bg);
@@ -269,6 +271,7 @@
     summary {
         cursor: pointer;
         text-align: center;
+        padding: 0.125em 2ch;
     }
 
     fieldset {
@@ -341,7 +344,7 @@
         display: contents;
     }
 
-    textarea.box::placeholder {
+    .box textarea::placeholder {
         color: currentColor;
         font-style: italic;
         opacity: 65%;
@@ -349,15 +352,19 @@
         transition: all 0.25s ease-out;
     }
 
-    textarea.box:focus::placeholder {
+    .box textarea:focus::placeholder {
         opacity: 45%;
     }
 
+    .error-status[hidden] {
+        display: none;
+    }
+
     .error-status {
+        display: flex;
         background: var(--error-bg);
         color: var(--error-fg);
         padding: 0.5em 0.5ch;
-        text-align: end;
         border-radius: 1ch;
         box-shadow: 0 0.1em 0.4em -0.1em var(--shadow-color);
         margin: 0.5em 0.5ch;
@@ -366,21 +373,19 @@
     }
 
     .error-status>:not(button) {
-        float: inline-start;
-        text-align: start;
+        flex: 1.0;
     }
 
     .error-status>button {
-        position: sticky;
-        top: 0;
-        bottom: 0;
+        height: max-content;
+        margin-block: auto;
     }
 
     button {
         background: none;
         border-radius: 1ch;
         color: var(--accent-color);
-        box-shadow: 0 0.1em 0.4em -0.1em var(--shadow-color);
+        box-shadow: 0 0.1em 0.5em 0 var(--shadow-color);
         border: none;
     }
 </style>
@@ -393,8 +398,7 @@
                 <label><span>Language preset</span> <select id="select-lang"></select></label>
                 <label><span>Theme preset</span> <select id="select-theme"></select></label>
                 <label>
-                    <span>Indentation size</span>
-
+                    <span>Indentation</span>
                     <select id="select-tab">
                         <optgroup label="Spaces">
                             <option>2</option>
@@ -406,25 +410,29 @@
                 </label>
             </fieldset>
         </details>
+
+        <div><a href="https://youngspe.github.io/projects/2024-07-23-textmate-grammar-playground/">learn more</a></div>
     </header>
     <main class="main-flex">
         <details open>
             <summary>TmLanguage</summary>
             <div class="box">
                 <div hidden id="grammar-error" class="error-status"></div>
-                <textarea placeholder="enter a TextMate language grammar" id="grammar-in" class="input box"></textarea>
+                <textarea placeholder="enter a TextMate language grammar" id="grammar-in" class="input"></textarea>
             </div>
         </details>
         <details open>
             <summary>TmTheme</summary>
             <div class="box">
                 <div hidden id="theme-error" class="error-status"></div>
-                <textarea placeholder="enter a TextMate color scheme" id="theme-in" class="input box"></textarea>
+                <textarea placeholder="enter a TextMate color scheme" id="theme-in" class="input"></textarea>
             </div>
         </details>
         <details open>
             <summary>Example code</summary>
-            <textarea placeholder="enter example code to highlight" id="code-in" class="input box"></textarea>
+            <div class="box">
+                <textarea placeholder="enter example code to highlight" id="code-in" class="input"></textarea>
+            </div>
         </details>
         <details open>
             <summary>Rendered</summary>
